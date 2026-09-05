@@ -202,6 +202,8 @@ export interface Commit {
 		oid: string;
 		message: string;
 		committedDate: Date;
+		additions?: number;
+		deletions?: number;
 		signature?: {
 			isValid: boolean;
 			state: string;

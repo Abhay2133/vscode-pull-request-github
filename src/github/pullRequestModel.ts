@@ -245,6 +245,42 @@ export class PullRequestModel extends IssueModel<PullRequest> implements IPullRe
 		return this._fileChangeViewedState;
 	}
 
+	get additions(): number | undefined {
+		return this.item.additions;
+	}
+
+	get deletions(): number | undefined {
+		return this.item.deletions;
+	}
+
+	async getDiffStat(): Promise<{ additions: number; deletions: number } | undefined> {
+		if (this.item.additions !== undefined && this.item.deletions !== undefined) {
+			return { additions: this.item.additions, deletions: this.item.deletions };
+		}
+		try {
+			const pr = await this.githubRepository.getPullRequest(this.number, 'PullRequestModel.getDiffStat');
+			if (pr && pr.additions !== undefined && pr.deletions !== undefined) {
+				return { additions: pr.additions, deletions: pr.deletions };
+			}
+		} catch {
+			// ignore, try REST fallback
+		}
+		try {
+			const { octokit, remote } = await this.githubRepository.ensure();
+			const { data } = await octokit.call(octokit.api.pulls.get, {
+				owner: remote.owner,
+				repo: remote.repositoryName,
+				pull_number: this.number,
+			});
+			this.item.additions = data.additions;
+			this.item.deletions = data.deletions;
+			return { additions: data.additions, deletions: data.deletions };
+		} catch (e) {
+			Logger.warn(`Failed to fetch diff stats for PR #${this.number}: ${e}`, PullRequestModel.ID);
+		}
+		return undefined;
+	}
+
 	public isRemoteHeadDeleted?: boolean;
 	public head: GitHubRef | null;
 	public isRemoteBaseDeleted?: boolean;

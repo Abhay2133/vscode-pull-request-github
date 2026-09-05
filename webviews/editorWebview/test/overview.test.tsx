@@ -38,6 +38,22 @@ describe('Overview', function () {
 		assert(out.container.querySelector('.overview-title'));
 	});
 
+	it('renders diffstat summary in header when additions and deletions are present', function () {
+		const pr = new PullRequestBuilder().additions(120).deletions(45).build();
+		const context = new PRContext(pr);
+
+		const out = render(
+			<PullRequestContext.Provider value={context}>
+				<Overview {...pr} />
+			</PullRequestContext.Provider>,
+		);
+
+		const diffstat = out.container.querySelector('.header-diffstat');
+		assert(diffstat);
+		assert.strictEqual(diffstat.querySelector('.diffstat-additions')?.textContent, '+120');
+		assert.strictEqual(diffstat.querySelector('.diffstat-deletions')?.textContent, '-45');
+	});
+
 	it('applies sticky class when scrolled', function () {
 		const pr = new PullRequestBuilder().build();
 		const context = new PRContext(pr);

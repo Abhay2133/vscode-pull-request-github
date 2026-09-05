@@ -91,6 +91,8 @@ export interface CommitEvent {
 	committedDate: Date;
 	verification?: CommitVerification;
 	status?: 'EXPECTED' | 'ERROR' | 'FAILURE' | 'PENDING' | 'SUCCESS';
+	additions?: number;
+	deletions?: number;
 }
 
 export interface CommitVerification {

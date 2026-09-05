@@ -652,3 +652,34 @@ button.inlined-dropdown:last-child {
 		transform: rotate(360deg);
 	}
 }
+
+.diffstat-summary {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-family: var(--vscode-editor-font-family, monospace);
+	font-weight: 600;
+	font-size: 12px;
+	line-height: 1;
+	user-select: none;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.diffstat-summary .diffstat-additions {
+	color: var(--vscode-gitDecoration-addedResourceForeground, #2ea043);
+}
+
+.diffstat-summary .diffstat-deletions {
+	color: var(--vscode-gitDecoration-deletedResourceForeground, #da3633);
+}
+
+.header-diffstat {
+	margin-left: auto;
+	font-size: 12px;
+	flex-shrink: 0;
+}
+
+.commit-diffstat {
+	font-size: 11px;
+}

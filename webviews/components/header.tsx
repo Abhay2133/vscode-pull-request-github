@@ -5,6 +5,7 @@
 
 import React, { useContext, useState } from 'react';
 import { ContextDropdown } from './contextDropdown';
+import { DiffStat } from './diffstat';
 import { copilotErrorIcon, copilotInProgressIcon, copilotSuccessIcon, copyIcon, editIcon, gitMergeIcon, gitPullRequestClosedIcon, gitPullRequestDraftIcon, gitPullRequestIcon, issuescon, loadingIcon, passIcon } from './icon';
 import { AuthorLink, Avatar } from './user';
 import { copilotEventToStatus, CopilotPRStatus, mostRecentCopilotEvent } from '../../src/common/copilot';
@@ -33,7 +34,9 @@ export function Header({
 	owner,
 	repo,
 	busy,
-	stateReason
+	stateReason,
+	additions,
+	deletions,
 }: PullRequest) {
 	const [currentTitle, setCurrentTitle] = useStateProp(title);
 	const [inEditMode, setEditMode] = useState(false);
@@ -65,6 +68,7 @@ export function Header({
 					busy={busy}
 				/>
 				<CancelCodingAgentButton canEdit={canEdit} codingAgentEvent={codingAgentEvent} />
+				<DiffStat additions={additions} deletions={deletions} className="header-diffstat" />
 			</div>
 		</>
 	);

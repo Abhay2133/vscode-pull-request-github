@@ -122,6 +122,8 @@ fragment Commit on PullRequestCommit {
 		}
 		oid
 		message
+		additions
+		deletions
 		committedDate
 		signature {
 			isValid

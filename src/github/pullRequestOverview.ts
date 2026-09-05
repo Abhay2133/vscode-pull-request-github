@@ -401,12 +401,17 @@ export class PullRequestOverviewPanel extends IssueOverviewPanel<PullRequestMode
 				}
 			};
 			const cachedTimelineEvents = [...(pullRequestModel.timelineEvents ?? [])];
+			const diffStatPromise = (pullRequestModel.additions !== undefined && pullRequestModel.deletions !== undefined)
+				? Promise.resolve({ additions: pullRequestModel.additions, deletions: pullRequestModel.deletions })
+				: measure('diffStat', pullRequestModel.getDiffStat());
+
 			const updatingPromise = Promise.all([
 				measure('defaultBranch', this._folderRepositoryManager.getPullRequestRepositoryDefaultBranch(pullRequestModel)),
 				measure('repositoryAccess', this._folderRepositoryManager.getPullRequestRepositoryAccessAndMergeMethods(pullRequestModel)),
 				measure('currentUser', this._folderRepositoryManager.getCurrentUser(pullRequestModel.githubRepository)),
 				measure('canEdit', pullRequestModel.canEdit()),
-				measure('assignableUsers', this._folderRepositoryManager.getAssignableUsers())
+				measure('assignableUsers', this._folderRepositoryManager.getAssignableUsers()),
+				diffStatPromise,
 			]);
 
 			const [
@@ -414,7 +419,8 @@ export class PullRequestOverviewPanel extends IssueOverviewPanel<PullRequestMode
 				repositoryAccess,
 				currentUser,
 				viewerCanEdit,
-				assignableUsers
+				assignableUsers,
+				diffStat,
 			] = await updatingPromise;
 			const pullRequest = pullRequestModel;
 			const timelineEvents = cachedTimelineEvents;
@@ -498,6 +504,8 @@ export class PullRequestOverviewPanel extends IssueOverviewPanel<PullRequestMode
 				generateDescriptionTitle: this.getGenerateDescriptionTitle(),
 				attestationCommitsEnabled: isAttestationCommitsEnabled(),
 				closingIssues,
+				additions: pullRequest.additions ?? diffStat?.additions,
+				deletions: pullRequest.deletions ?? diffStat?.deletions,
 			};
 			this._postMessage({
 				command: 'pr.initialize',
@@ -514,6 +522,9 @@ export class PullRequestOverviewPanel extends IssueOverviewPanel<PullRequestMode
 				}
 			};
 			const reviewRequestsPromise = measureDeferred('reviewRequests', pullRequestModel.getReviewRequests());
+			const deferredDiffStatPromise = (context.additions === undefined || context.deletions === undefined)
+				? measureDeferred('diffStat', pullRequestModel.getDiffStat())
+				: Promise.resolve(diffStat);
 			const deferredDataPromise = Promise.all([
 				measureDeferred('statusChecks', pullRequestModel.getStatusChecks()),
 				reviewRequestsPromise,
@@ -524,6 +535,7 @@ export class PullRequestOverviewPanel extends IssueOverviewPanel<PullRequestMode
 				measureDeferred('preferredEmail', this._folderRepositoryManager.getPreferredEmail(pullRequestModel)),
 				measureDeferred('coAuthors', COPILOT_ACCOUNTS[pullRequestModel.author.login] ? pullRequestModel.getCoAuthors() : Promise.resolve([])),
 				measureDeferred('draftMode', pullRequestModel.validateDraftMode()),
+				deferredDiffStatPromise,
 			]);
 			void deferredDataPromise.then(async ([
 				status,
@@ -535,6 +547,7 @@ export class PullRequestOverviewPanel extends IssueOverviewPanel<PullRequestMode
 				emailForCommit,
 				coAuthors,
 				hasReviewDraft,
+				deferredDiffStat,
 			]) => {
 				const latestTimelineEvents = [...(pullRequestModel.timelineEvents ?? timelineEvents)];
 				const reviewers = parseReviewers(requestedReviewers!, latestTimelineEvents, pullRequest.author);
@@ -545,22 +558,27 @@ export class PullRequestOverviewPanel extends IssueOverviewPanel<PullRequestMode
 					return;
 				}
 				this._existingReviewers = reviewers;
+				const prUpdatePayload: Partial<PullRequest> = {
+					status: status[0],
+					reviewRequirement: status[1],
+					isLocalHeadDeleted: !branchInfo,
+					canUpdateBranch: pullRequest.item.viewerCanUpdate && !isBranchUpToDateWithBase && this.isUpdateBranchWithGitHubEnabled(),
+					mergeable: mergeability.mergeability,
+					reviewers,
+					hasReviewDraft,
+					mergeQueueMethod,
+					emailForCommit,
+					currentUserReviewState: this.getCurrentUserReviewState(reviewers, currentUser),
+					isCopilotOnMyBehalf: isCopilotOnBehalf,
+					canRequestCopilotReview: copilotUser !== undefined && !isCopilotAlreadyReviewer,
+				};
+				if (deferredDiffStat) {
+					prUpdatePayload.additions = deferredDiffStat.additions;
+					prUpdatePayload.deletions = deferredDiffStat.deletions;
+				}
 				await this._postMessage({
 					command: 'pr.update',
-					pullrequest: {
-						status: status[0],
-						reviewRequirement: status[1],
-						isLocalHeadDeleted: !branchInfo,
-						canUpdateBranch: pullRequest.item.viewerCanUpdate && !isBranchUpToDateWithBase && this.isUpdateBranchWithGitHubEnabled(),
-						mergeable: mergeability.mergeability,
-						reviewers,
-						hasReviewDraft,
-						mergeQueueMethod,
-						emailForCommit,
-						currentUserReviewState: this.getCurrentUserReviewState(reviewers, currentUser),
-						isCopilotOnMyBehalf: isCopilotOnBehalf,
-						canRequestCopilotReview: copilotUser !== undefined && !isCopilotAlreadyReviewer,
-					} satisfies Partial<PullRequest>,
+					pullrequest: prUpdatePayload,
 				});
 				const deferredTimingSummary = [...deferredTimings]
 					.sort(([, firstDuration], [, secondDuration]) => secondDuration - firstDuration)

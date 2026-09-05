@@ -7,6 +7,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { CommentView } from './comment';
 import { CommitVerificationBadge } from './commitVerification';
 import Diff from './diff';
+import { DiffStat } from './diffstat';
 import { addIcon, checkIcon, circleFilledIcon, closeIcon, commentIcon, errorIcon, gitCommitIcon, gitMergeIcon, loadingIcon, tasklistIcon, threeBars } from './icon';
 import { nbsp } from './space';
 import { Timestamp } from './timestamp';
@@ -164,6 +165,7 @@ const CommitEventView = (event: CommitEvent) => {
 					<CommitStateIcon status={event.status} />
 				</div>
 				<CommitVerificationBadge verification={event.verification} committedDate={event.committedDate} />
+				<DiffStat additions={event.additions} deletions={event.deletions} className="commit-diffstat" />
 				<a
 					className="sha"
 					onClick={(e) => handleCommitClick(e, 'sha')}

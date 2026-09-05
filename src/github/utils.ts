@@ -454,7 +454,9 @@ export function convertRESTPullRequestToRawPullRequest(
 		commits: [], // commits only available through GraphQL API
 		reactionCount: 0, // reaction count only available through GraphQL API
 		reactions: [], // reactions only available through GraphQL API
-		commentCount: 0 // comment count only available through GraphQL API
+		commentCount: 0, // comment count only available through GraphQL API
+		additions: (pullRequest as OctokitCommon.PullsGetResponseData).additions,
+		deletions: (pullRequest as OctokitCommon.PullsGetResponseData).deletions,
 	};
 
 	// mergeable is not included in the list response, will need to fetch later
@@ -1326,7 +1328,9 @@ export async function parseCombinedTimelineEvents(
 						keyFingerprint: commitEv.commit.signature.keyFingerprint ?? undefined,
 						email: commitEv.commit.signature.email ?? undefined,
 					} : undefined,
-					status: commitEv.commit.statusCheckRollup?.state
+					status: commitEv.commit.statusCheckRollup?.state,
+					additions: commitEv.commit.additions,
+					deletions: commitEv.commit.deletions,
 				} as Common.CommitEvent); // TODO remove cast
 				break;
 			case Common.EventType.Merged:
